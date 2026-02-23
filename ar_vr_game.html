@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Ball Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #0f172a;
+            --secondary: #1e293b;
+            --accent: #06b6d4;
+            --accent-bright: #0ff;
+            --success: #10b981;
+            --danger: #ef4444;
+            --text: #f1f5f9;
+            --text-muted: #cbd5e1;
+        }
+
+        body {
+            font-family: 'Courier Prime', monospace;
+            background: linear-gradient(135deg, var(--primary) 0%, #0a0e27 100%);
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* Glitch border effect */
+        .content {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: var(--secondary);
+            border: 2px solid var(--accent);
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.3), inset 0 0 20px rgba(6, 182, 212, 0.1);
+        }
+
+        .content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent 0%, rgba(6, 182, 212, 0.03) 50%, transparent 100%);
+            pointer-events: none;
+            animation: scanlines 0.15s linear infinite;
+        }
+
+        @keyframes scanlines {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(2px); }
+        }
+
+        /* Menu Screen */
+        #menuScreen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+            padding: 40px;
+            text-align: center;
+            z-index: 10;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .logo {
+            font-size: 3.5rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, var(--accent), var(--accent-bright));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px rgba(6, 182, 212, 0.5);
+            animation: pulse 2s ease-in-out infinite;
+            letter-spacing: 3px;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.02); }
+        }
+
+        .menu-description {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            max-width: 400px;
+            line-height: 1.6;
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        button {
+            padding: 16px 32px;
+            font-size: 1rem;
+            border: 2px solid var(--accent);
+            background: transparent;
+            color: var(--accent);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            font-family: 'Courier Prime', monospace;
+            font-weight: bold;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: var(--accent);
+            transition: left 0.3s ease;
+            z-index: -1;
+        }
+
+        button:hover {
+            color: var(--primary);
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.6);
+        }
+
+        button:hover::before {
+            left: 0;
+        }
+
+        /* Camera Screen */
+        #cameraScreen {
+            display: none;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 20;
+        }
+
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: none;
+        }
+
+        .camera-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .qr-marker {
+            position: absolute;
+            border: 3px solid var(--accent-bright);
+            box-shadow: 0 0 20px var(--accent);
+        }
+
+        .camera-info {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.9);
+            padding: 20px 30px;
+            border: 2px solid var(--accent);
+            border-radius: 8px;
+            color: var(--accent);
+            font-size: 1rem;
+            letter-spacing: 1px;
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        /* Game Screen */
+        #gameScreen {
+            display: none;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 15;
+        }
+
+        #gameContainer {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .game-hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--accent);
+            font-size: 1.2rem;
+            z-index: 100;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .score-display {
+            background: rgba(15, 23, 42, 0.8);
+            padding: 12px 20px;
+            border: 2px solid var(--accent);
+            border-radius: 4px;
+            text-shadow: 0 0 10px var(--accent);
+        }
+
+        .game-controls {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            z-index: 100;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            padding: 12px 24px;
+            font-size: 0.9rem;
+            min-width: 120px;
+        }
+
+        .power-indicator {
+            position: absolute;
+            bottom: 140px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 30px;
+            border: 2px solid var(--accent);
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 4px;
+            z-index: 100;
+            overflow: hidden;
+        }
+
+        .power-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success), var(--accent), var(--danger));
+            width: 0%;
+            transition: width 0.05s linear;
+        }
+
+        .power-label {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--accent);
+            font-size: 0.85rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .instruction-text {
+            position: absolute;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            color: var(--accent);
+            font-size: 1.1rem;
+            background: rgba(15, 23, 42, 0.7);
+            padding: 15px 25px;
+            border-left: 3px solid var(--accent);
+            border-right: 3px solid var(--accent);
+            max-width: 80%;
+            animation: fadeInOut 3s ease-in-out infinite;
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .success-popup {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(16, 185, 129, 0.9);
+            color: white;
+            padding: 30px 50px;
+            border-radius: 8px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            z-index: 200;
+            animation: popupAppear 0.5s ease-out;
+            border: 3px solid var(--accent-bright);
+        }
+
+        @keyframes popupAppear {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
+        /* Hidden state */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .logo {
+                font-size: 2.5rem;
+            }
+
+            .menu-description {
+                font-size: 0.95rem;
+            }
+
+            .game-controls {
+                bottom: 20px;
+            }
+
+            .power-indicator {
+                bottom: 100px;
+            }
+        }
+
+        /* Loading spinner */
+        .spinner {
+            border: 3px solid rgba(6, 182, 212, 0.3);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="content">
+            <!-- Menu Screen -->
+            <div id="menuScreen">
+                <div class="logo">◆ AR BALL GAME ◆</div>
+                <p class="menu-description">
+                    Scan the QR code below to access AR/VR game modes. Play interactive ball games using your device camera and motion controls.
+                </p>
+                <div class="button-group">
+                    <button onclick="startCamera()">📷 SCAN QR CODE</button>
+                    <button onclick="startGameDirect('throw')">🎯 THROW INTO NET</button>
+                    <button onclick="startGameDirect('bat')">⚾ BAT GAME</button>
+                </div>
+                <div style="margin-top: 40px; color: var(--text-muted); font-size: 0.9rem;">
+                    <p>✓ Mobile-friendly</p>
+                    <p>✓ Uses device camera</p>
+                    <p>✓ Motion-based controls</p>
+                </div>
+            </div>
+
+            <!-- Camera Screen -->
+            <div id="cameraScreen">
+                <video id="video" autoplay></video>
+                <canvas id="canvas"></canvas>
+                <div class="camera-overlay">
+                    <div class="camera-info">SCANNING QR CODE...</div>
+                </div>
+            </div>
+
+            <!-- Game Screen -->
+            <div id="gameScreen">
+                <div id="gameContainer"></div>
+                <div class="game-hud">
+                    <div class="score-display">SCORE: <span id="score">0</span></div>
+                    <div class="score-display">HITS: <span id="hits">0</span></div>
+                </div>
+                <div class="instruction-text" id="instructionText"></div>
+                <div class="power-indicator">
+                    <div class="power-label">POWER</div>
+                    <div class="power-bar" id="powerBar"></div>
+                </div>
+                <div class="game-controls">
+                    <button class="control-btn" id="chargeBtn" onmousedown="startCharge()" onmouseup="throwBall()" ontouchstart="startCharge()" ontouchend="throwBall()">CHARGE & THROW</button>
+                    <button class="control-btn" onclick="resetGame()">RESET</button>
+                    <button class="control-btn" onclick="backToMenu()">MENU</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- jsQR Library -->
+    <script async src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+
+    <script>
+        // Global state
+        let currentScreen = 'menu';
+        let gameMode = null;
+        let score = 0;
+        let hits = 0;
+        let chargeLevel = 0;
+        let isCharging = false;
+        let gameScene = null;
+        let gameCamera = null;
+        let gameRenderer = null;
+        let ball = null;
+        let goal = null;
+        let bat = null;
+        let isGameRunning = false;
+
+        // ============ SCREEN MANAGEMENT ============
+        function showScreen(screenName) {
+            document.getElementById('menuScreen').classList.add('hidden');
+            document.getElementById('cameraScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById(screenName).classList.remove('hidden');
+            currentScreen = screenName;
+        }
+
+        // ============ CAMERA & QR CODE ============
+        async function startCamera() {
+            showScreen('cameraScreen');
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }
+                });
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                
+                setTimeout(() => {
+                    scanQRCode(video);
+                }, 500);
+            } catch (err) {
+                console.error('Camera error:', err);
+                alert('Unable to access camera');
+                showScreen('menuScreen');
+            }
+        }
+
+        function scanQRCode(video) {
+            const canvas = document.getElementById('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+
+            function scan() {
+                if (currentScreen !== 'cameraScreen') return;
+
+                ctx.drawImage(video, 0, 0);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+                if (code) {
+                    // Simulate QR code detection - start game
+                    const gameType = Math.random() > 0.5 ? 'throw' : 'bat';
+                    video.srcObject.getTracks().forEach(track => track.stop());
+                    startGame(gameType);
+                } else {
+                    requestAnimationFrame(scan);
+                }
+            }
+            scan();
+        }
+
+        // ============ GAME START ============
+        function startGameDirect(mode) {
+            startGame(mode);
+        }
+
+        function startGame(mode) {
+            gameMode = mode;
+            score = 0;
+            hits = 0;
+            isGameRunning = true;
+            document.getElementById('score').textContent = '0';
+            document.getElementById('hits').textContent = '0';
+            document.getElementById('instructionText').textContent = 
+                mode === 'throw' ? '🎯 Hold and release to throw the ball into the net!' : 
+                '⚾ Time your swing to hit the ball!';
+
+            showScreen('gameScreen');
+            initGame(mode);
+        }
+
+        // ============ THREE.JS GAME ENGINE ============
+        function initGame(mode) {
+            const container = document.getElementById('gameContainer');
+            container.innerHTML = '';
+
+            // Scene setup
+            gameScene = new THREE.Scene();
+            gameScene.background = new THREE.Color(0x1e293b);
+            gameScene.fog = new THREE.Fog(0x1e293b, 500, 1000);
+
+            // Camera
+            gameCamera = new THREE.PerspectiveCamera(
+                75,
+                container.clientWidth / container.clientHeight,
+                0.1,
+                1000
+            );
+            gameCamera.position.set(0, 5, 15);
+            gameCamera.lookAt(0, 2, 0);
+
+            // Renderer
+            gameRenderer = new THREE.WebGLRenderer({ antialias: true });
+            gameRenderer.setSize(container.clientWidth, container.clientHeight);
+            gameRenderer.shadowMap.enabled = true;
+            container.appendChild(gameRenderer.domElement);
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            gameScene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0x06b6d4, 0.8);
+            directionalLight.position.set(10, 20, 10);
+            directionalLight.castShadow = true;
+            gameScene.add(directionalLight);
+
+            // Floor
+            const floorGeometry = new THREE.PlaneGeometry(200, 200);
+            const floorMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x0f172a,
+                roughness: 0.8
+            });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            gameScene.add(floor);
+
+            // Grid visualization
+            const gridHelper = new THREE.GridHelper(200, 20, 0x06b6d4, 0x1e293b);
+            gameScene.add(gridHelper);
+
+            if (mode === 'throw') {
+                initThrowGame();
+            } else if (mode === 'bat') {
+                initBatGame();
+            }
+
+            window.addEventListener('resize', onWindowResize);
+            animate();
+        }
+
+        function initThrowGame() {
+            // Ball
+            const ballGeometry = new THREE.SphereGeometry(0.3, 32, 32);
+            const ballMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xef4444,
+                metalness: 0.6,
+                roughness: 0.4
+            });
+            ball = new THREE.Mesh(ballGeometry, ballMaterial);
+            ball.castShadow = true;
+            ball.receiveShadow = true;
+            ball.position.set(-10, 2, 0);
+            ball.velocity = new THREE.Vector3(0, 0, 0);
+            gameScene.add(ball);
+
+            // Goal Net
+            const goalGroup = new THREE.Group();
+            goalGroup.position.set(10, 2, 0);
+
+            // Goal posts
+            const postGeometry = new THREE.CylinderGeometry(0.2, 0.2, 5);
+            const postMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            const post1 = new THREE.Mesh(postGeometry, postMaterial);
+            post1.position.set(-2, 0, -1.5);
+            post1.castShadow = true;
+            goalGroup.add(post1);
+
+            const post2 = new THREE.Mesh(postGeometry, postMaterial);
+            post2.position.set(-2, 0, 1.5);
+            post2.castShadow = true;
+            goalGroup.add(post2);
+
+            // Goal net (simple plane)
+            const netGeometry = new THREE.PlaneGeometry(3, 5);
+            const netMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x06b6d4,
+                wireframe: true
+            });
+            const net = new THREE.Mesh(netGeometry, netMaterial);
+            net.position.set(-2, 0, 0);
+            net.castShadow = false;
+            goalGroup.add(net);
+
+            gameScene.add(goalGroup);
+            goal = goalGroup;
+        }
+
+        function initBatGame() {
+            // Ball
+            const ballGeometry = new THREE.SphereGeometry(0.25, 32, 32);
+            const ballMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xfbbf24,
+                metalness: 0.5,
+                roughness: 0.3
+            });
+            ball = new THREE.Mesh(ballGeometry, ballMaterial);
+            ball.castShadow = true;
+            ball.receiveShadow = true;
+            ball.position.set(0, 3, 30);
+            ball.velocity = new THREE.Vector3(0, -0.1, -0.3);
+            gameScene.add(ball);
+
+            // Bat
+            const batGeometry = new THREE.BoxGeometry(1, 0.15, 0.15);
+            const batMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x8b4513,
+                roughness: 0.7
+            });
+            bat = new THREE.Mesh(batGeometry, batMaterial);
+            bat.position.set(0, 2, 0);
+            bat.castShadow = true;
+            bat.receiveShadow = true;
+            gameScene.add(bat);
+
+            // Target
+            const targetGeometry = new THREE.SphereGeometry(1, 32, 32);
+            const targetMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x10b981,
+                emissive: 0x10b981,
+                emissiveIntensity: 0.3
+            });
+            goal = new THREE.Mesh(targetGeometry, targetMaterial);
+            goal.position.set(0, 10, 50);
+            gameScene.add(goal);
+        }
+
+        // ============ GAME PHYSICS ============
+        function startCharge() {
+            if (!isGameRunning) return;
+            isCharging = true;
+            chargeLevel = 0;
+        }
+
+        function throwBall() {
+            if (!isCharging || !isGameRunning) return;
+            isCharging = false;
+
+            const power = chargeLevel / 100;
+            
+            if (gameMode === 'throw') {
+                ball.velocity.set(
+                    Math.random() * 2 - 1,
+                    15 * power,
+                    25 * power
+                );
+            } else if (gameMode === 'bat') {
+                bat.rotation.z = -Math.PI / 3;
+                setTimeout(() => {
+                    bat.rotation.z = 0;
+                    if (chargeLevel > 60) {
+                        ball.velocity.set(
+                            (Math.random() - 0.5) * 10,
+                            Math.random() * 10 + 10,
+                            -30 * power
+                        );
+                    }
+                }, 150);
+            }
+
+            document.getElementById('powerBar').style.width = '0%';
+        }
+
+        function resetGame() {
+            if (gameMode === 'throw') {
+                ball.position.set(-10, 2, 0);
+                ball.velocity.set(0, 0, 0);
+            } else {
+                ball.position.set(0, 3, 30);
+                ball.velocity.set(0, -0.1, -0.3);
+            }
+        }
+
+        function backToMenu() {
+            isGameRunning = false;
+            showScreen('menuScreen');
+            if (gameRenderer) {
+                gameRenderer.dispose();
+            }
+        }
+
+        // ============ ANIMATION LOOP ============
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (currentScreen !== 'gameScreen' || !isGameRunning) return;
+
+            // Update charge level
+            if (isCharging) {
+                chargeLevel = Math.min(100, chargeLevel + 2);
+                document.getElementById('powerBar').style.width = chargeLevel + '%';
+            }
+
+            // Physics
+            if (ball) {
+                ball.velocity.y -= 0.3; // Gravity
+                ball.position.add(ball.velocity);
+
+                // Bounce on floor
+                if (ball.position.y < 0.3) {
+                    ball.position.y = 0.3;
+                    ball.velocity.y *= -0.6;
+                    ball.velocity.x *= 0.95;
+                    ball.velocity.z *= 0.95;
+                }
+
+                // Check goal collision
+                if (goal && ball.position.distanceTo(goal.position) < 2) {
+                    score += 10;
+                    hits++;
+                    document.getElementById('score').textContent = score;
+                    document.getElementById('hits').textContent = hits;
+                    
+                    showSuccessPopup();
+                    resetGame();
+                }
+
+                // Ball reset if too far
+                if (ball.position.length() > 200) {
+                    resetGame();
+                }
+            }
+
+            gameRenderer.render(gameScene, gameCamera);
+        }
+
+        function showSuccessPopup() {
+            const popup = document.createElement('div');
+            popup.className = 'success-popup';
+            popup.textContent = '🎉 GOAL! +10 POINTS';
+            document.getElementById('gameScreen').appendChild(popup);
+            setTimeout(() => popup.remove(), 1500);
+        }
+
+        function onWindowResize() {
+            if (!gameCamera || !gameRenderer) return;
+            const container = document.getElementById('gameContainer');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            gameCamera.aspect = width / height;
+            gameCamera.updateProjectionMatrix();
+            gameRenderer.setSize(width, height);
+        }
+    </script>
+</body>
+</html>
