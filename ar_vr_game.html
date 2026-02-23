@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR Ball Game</title>
+    <title>AR Ball Games - QR Code Launcher</title>
     <style>
         * {
             margin: 0;
@@ -11,472 +11,502 @@
             box-sizing: border-box;
         }
 
+        :root {
+            --primary-dark: #0a0e27;
+            --primary: #0f172a;
+            --secondary: #1e293b;
+            --accent: #06b6d4;
+            --accent-bright: #0ff;
+            --success: #10b981;
+            --danger: #ef4444;
+            --text: #f1f5f9;
+            --text-muted: #cbd5e1;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background: #0f172a;
-            color: #f1f5f9;
-            overflow: hidden;
-            height: 100vh;
+            font-family: 'Courier Prime', monospace;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 50%, #1a1f3a 100%);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
         }
 
-        .container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 100%;
-            height: 100vh;
-        }
-
-        .menu {
-            text-align: center;
-            padding: 40px;
-        }
-
-        .menu h1 {
-            font-size: 3rem;
-            margin-bottom: 30px;
-            color: #06b6d4;
-        }
-
-        .menu p {
-            margin-bottom: 30px;
-            color: #cbd5e1;
-        }
-
-        button {
-            display: block;
-            width: 300px;
-            padding: 15px;
-            margin: 10px auto;
-            font-size: 1.1rem;
-            background: #06b6d4;
-            color: #0f172a;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        button:hover {
-            background: #0ff;
-            transform: scale(1.05);
-        }
-
-        button:active {
-            transform: scale(0.95);
-        }
-
-        .debug-box {
+        .scanlines {
             position: fixed;
-            bottom: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.9);
-            color: #0f0;
-            padding: 10px;
-            border: 1px solid #0f0;
-            font-size: 12px;
-            max-width: 300px;
-            max-height: 150px;
-            overflow-y: auto;
-            font-family: monospace;
-        }
-
-        #gameScreen {
-            display: none;
-            position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(6, 182, 212, 0.03) 0px,
+                rgba(6, 182, 212, 0.03) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 1;
+            animation: scanlineMovement 0.1s linear infinite;
         }
 
-        .game-ui {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            color: #06b6d4;
-            font-weight: bold;
-            z-index: 100;
+        @keyframes scanlineMovement {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(4px); }
         }
 
-        .score {
+        .container {
+            position: relative;
+            z-index: 2;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            min-height: 100vh;
             display: flex;
-            gap: 30px;
-            margin-bottom: 20px;
-            background: rgba(0,0,0,0.7);
-            padding: 15px;
-            border-radius: 5px;
-            width: fit-content;
+            flex-direction: column;
+            justify-content: center;
         }
 
-        .controls {
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+            animation: headerGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes headerGlow {
+            0%, 100% { text-shadow: 0 0 10px var(--accent); }
+            50% { text-shadow: 0 0 30px var(--accent), 0 0 60px var(--accent); }
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, var(--accent), var(--accent-bright));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 3px;
+            margin-bottom: 15px;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-bottom: 40px;
+        }
+
+        .section {
+            padding: 30px;
+            border: 2px solid var(--accent);
+            background: rgba(15, 23, 42, 0.5);
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.2);
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+
+        .section h2 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: var(--accent);
+            letter-spacing: 2px;
+        }
+
+        .qr-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        #qrCode {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .qr-url {
+            margin-top: 15px;
+            padding: 10px;
+            background: var(--secondary);
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            word-break: break-all;
+            font-size: 0.85rem;
+            color: var(--accent);
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 14px 24px;
+            font-size: 1rem;
+            border: 2px solid var(--accent);
+            background: transparent;
+            color: var(--accent);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            font-family: 'Courier Prime', monospace;
+            font-weight: bold;
+            letter-spacing: 1px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        button::before {
+            content: '';
             position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: var(--accent);
+            transition: left 0.3s ease;
+            z-index: -1;
+        }
+
+        button:hover {
+            color: var(--primary);
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.6);
+        }
+
+        button:hover::before {
+            left: 0;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .game-info {
+            background: rgba(16, 185, 129, 0.1);
+            border-left: 4px solid var(--success);
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .info-title {
+            font-weight: bold;
+            color: var(--success);
+            margin-bottom: 8px;
+        }
+
+        .steps {
+            counter-reset: step-counter;
+            padding-left: 0;
+            list-style: none;
+        }
+
+        .steps li {
+            counter-increment: step-counter;
+            margin-bottom: 12px;
+            padding-left: 30px;
+            position: relative;
+            line-height: 1.6;
+            color: var(--text-muted);
+        }
+
+        .steps li::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            width: 24px;
+            height: 24px;
+            background: var(--accent);
+            color: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .feature {
+            padding: 12px;
+            background: rgba(6, 182, 212, 0.1);
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .feature-icon {
+            font-size: 1.3rem;
+            margin-right: 8px;
+        }
+
+        .copy-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+
+        .success-message {
+            background: var(--success);
+            color: var(--primary);
+            padding: 12px;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: none;
+            font-weight: bold;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .demo-link {
+            background: var(--danger);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        @media (max-width: 1024px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 2.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 10px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .section {
+                padding: 20px;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+
+            button {
+                padding: 12px 16px;
+                font-size: 0.9rem;
+            }
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid var(--secondary);
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .tech-stack {
             display: flex;
             gap: 10px;
-            z-index: 100;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 15px;
         }
 
-        .control-btn {
-            width: 120px !important;
-            margin: 0 !important;
-        }
-
-        .power-bar-container {
-            position: absolute;
-            bottom: 120px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 200px;
-            height: 20px;
-            background: rgba(0,0,0,0.7);
-            border: 2px solid #06b6d4;
-            border-radius: 3px;
-            z-index: 100;
-        }
-
-        .power-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #10b981, #06b6d4, #ef4444);
-            width: 0%;
-            transition: width 0.05s;
-        }
-
-        .error {
-            background: #ef4444;
-            color: white;
-            padding: 20px;
-            border-radius: 5px;
-            margin: 20px;
+        .tech-badge {
+            padding: 6px 12px;
+            background: rgba(6, 182, 212, 0.2);
+            border: 1px solid var(--accent);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: var(--accent);
         }
     </style>
 </head>
 <body>
+    <div class="scanlines"></div>
+
     <div class="container">
-        <div class="menu" id="menu">
-            <h1>🎮 AR BALL GAME</h1>
-            <p>3D Physics-based Ball Games</p>
-            <button onclick="startThrowGame()">🎯 THROW INTO NET</button>
-            <button onclick="startBatGame()">⚾ BAT GAME</button>
-            <p style="margin-top: 30px; font-size: 0.9rem;">Three.js loaded: <span id="threeStatus">Checking...</span></p>
+        <div class="header">
+            <h1>◆ AR BALL GAMES ◆</h1>
+            <p class="subtitle">MOTION-TRACKED 3D GAMING EXPERIENCE</p>
         </div>
 
-        <div id="gameScreen">
-            <div class="game-ui">
-                <div class="score">
-                    <div>SCORE: <span id="score">0</span></div>
-                    <div>HITS: <span id="hits">0</span></div>
+        <div class="content">
+            <!-- Left Section: QR Code Generator -->
+            <div class="section">
+                <h2>📱 SCAN TO PLAY</h2>
+                <p style="margin-bottom: 20px; line-height: 1.6; color: var(--text-muted);">
+                    Generate a QR code that users can scan with their phone camera to instantly launch the AR gaming app with motion-tracked ball throwing.
+                </p>
+
+                <div class="qr-box">
+                    <div id="qrCode" style="min-height: 250px; display: flex; align-items: center; justify-content: center;">
+                        <span style="color: #999;">Generating QR Code...</span>
+                    </div>
+                </div>
+
+                <div class="qr-url" id="qrUrl">Generating URL...</div>
+
+                <div class="button-group">
+                    <button onclick="downloadQR()">⬇️ DOWNLOAD QR CODE</button>
+                    <button onclick="copyURLToClipboard()" class="copy-btn">📋 COPY LINK</button>
+                </div>
+
+                <div class="success-message" id="successMsg">✓ Copied to clipboard!</div>
+
+                <div class="game-info">
+                    <div class="info-title">📋 HOW IT WORKS</div>
+                    <ol class="steps">
+                        <li>User scans QR code with phone camera</li>
+                        <li>App opens automatically</li>
+                        <li>User selects game mode (Cricket/Basketball)</li>
+                        <li>Camera activates and shows AR view</li>
+                        <li>Tilt phone to aim, swipe to throw</li>
+                        <li>Motion sensors track ball trajectory</li>
+                    </ol>
                 </div>
             </div>
 
-            <div class="power-bar-container">
-                <div class="power-bar" id="powerBar"></div>
-            </div>
+            <!-- Right Section: Game Information -->
+            <div class="section">
+                <h2>🎮 GAME MODES</h2>
 
-            <div class="controls">
-                <button class="control-btn" 
-                        onmousedown="startCharge()" 
-                        onmouseup="throwBall()"
-                        ontouchstart="startCharge()" 
-                        ontouchend="throwBall()">
-                    THROW
-                </button>
-                <button class="control-btn" onclick="resetGame()">RESET</button>
-                <button class="control-btn" onclick="goToMenu()">MENU</button>
+                <div class="game-info" style="background: rgba(239, 68, 68, 0.1); border-left-color: var(--danger);">
+                    <div class="info-title" style="color: var(--danger);">🏏 CRICKET GAME</div>
+                    <p style="margin-bottom: 10px;">Face incoming cricket balls and hit them with precision. Track your runs and highest scores.</p>
+                    <div class="features">
+                        <div class="feature"><span class="feature-icon">📊</span>Score Tracking</div>
+                        <div class="feature"><span class="feature-icon">🎯</span>Accuracy Based</div>
+                        <div class="feature"><span class="feature-icon">⚡</span>Real-time Physics</div>
+                        <div class="feature"><span class="feature-icon">📱</span>Motion Control</div>
+                    </div>
+                </div>
+
+                <div class="game-info" style="background: rgba(251, 191, 36, 0.1); border-left-color: #fbbf24;">
+                    <div class="info-title" style="color: #fbbf24;">🏀 BASKETBALL GAME</div>
+                    <p style="margin-bottom: 10px;">Throw basketballs into hoops at varying distances. Challenge yourself with increasing difficulty levels.</p>
+                    <div class="features">
+                        <div class="feature"><span class="feature-icon">🎯</span>Multiple Hoops</div>
+                        <div class="feature"><span class="feature-icon">📈</span>Difficulty Levels</div>
+                        <div class="feature"><span class="feature-icon">⚡</span>Physics Engine</div>
+                        <div class="feature"><span class="feature-icon">🏆</span>Leaderboard</div>
+                    </div>
+                </div>
+
+                <div class="game-info">
+                    <div class="info-title">✨ FEATURES</div>
+                    <ul class="steps">
+                        <li><strong>Motion Tracking:</strong> Uses phone accelerometer & gyroscope</li>
+                        <li><strong>AR Camera:</strong> Real-world background with 3D objects</li>
+                        <li><strong>Physics Simulation:</strong> Realistic ball movement</li>
+                        <li><strong>Score System:</strong> Track hits and personal bests</li>
+                        <li><strong>Mobile Optimized:</strong> Works on iOS & Android</li>
+                    </ul>
+                </div>
+
+                <h2 style="margin-top: 30px; margin-bottom: 15px;">🔧 TECHNICAL STACK</h2>
+                <div class="tech-stack">
+                    <div class="tech-badge">Three.js</div>
+                    <div class="tech-badge">WebGL</div>
+                    <div class="tech-badge">Device API</div>
+                    <div class="tech-badge">Accelerometer</div>
+                    <div class="tech-badge">Gyroscope</div>
+                    <div class="tech-badge">Camera API</div>
+                </div>
             </div>
+        </div>
+
+        <div class="footer">
+            <p style="margin-bottom: 10px;">Made with WebGL 3D Graphics & Motion Sensors</p>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">
+                Works on iOS Safari, Android Chrome, and modern mobile browsers
+            </p>
         </div>
     </div>
 
-    <div class="debug-box" id="debugBox"></div>
-
-    <!-- Load Three.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- QR Code Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <script>
-        let debugMessages = [];
-        
-        function debug(msg) {
-            console.log(msg);
-            debugMessages.unshift('[' + new Date().toLocaleTimeString() + '] ' + msg);
-            if (debugMessages.length > 10) debugMessages.pop();
-            document.getElementById('debugBox').innerHTML = debugMessages.join('<br>');
+        // Generate the app URL
+        const appURL = window.location.origin + '/ar_ball_game_app.html';
+        const qrContainer = document.getElementById('qrCode');
+        const qrUrlElement = document.getElementById('qrUrl');
+
+        // Display the URL
+        qrUrlElement.textContent = 'App URL: ' + appURL;
+
+        // Generate QR Code
+        try {
+            // Clear previous QR if exists
+            qrContainer.innerHTML = '';
+            new QRCode(qrContainer, {
+                text: appURL,
+                width: 250,
+                height: 250,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        } catch(e) {
+            console.error('QR Code generation error:', e);
+            qrContainer.innerHTML = '<p style="color: #ef4444;">Error generating QR code. Check browser console.</p>';
         }
 
-        debug('Script starting...');
-
-        // Check Three.js
-        window.addEventListener('load', function() {
-            debug('Window loaded');
-            if (typeof THREE !== 'undefined') {
-                debug('✅ THREE.js loaded successfully');
-                document.getElementById('threeStatus').textContent = '✅ READY';
-                document.getElementById('threeStatus').style.color = '#10b981';
-            } else {
-                debug('❌ THREE.js NOT FOUND');
-                document.getElementById('threeStatus').textContent = '❌ FAILED';
-                document.getElementById('threeStatus').style.color = '#ef4444';
-            }
-        });
-
-        // Game state
-        let gameActive = false;
-        let gameMode = null;
-        let score = 0;
-        let hits = 0;
-        let charging = false;
-        let chargeLevel = 0;
-
-        let scene, camera, renderer;
-        let ball, goalObject;
-        let chargeInterval;
-
-        function debug(msg) {
-            console.log(msg);
-            debugMessages.unshift('[' + new Date().toLocaleTimeString() + '] ' + msg);
-            if (debugMessages.length > 10) debugMessages.pop();
-            document.getElementById('debugBox').innerHTML = debugMessages.join('<br>');
-        }
-
-        function startThrowGame() {
-            debug('Starting throw game...');
-            try {
-                gameMode = 'throw';
-                startGame();
-            } catch(e) {
-                debug('ERROR: ' + e.message);
-            }
-        }
-
-        function startBatGame() {
-            debug('Starting bat game...');
-            try {
-                gameMode = 'bat';
-                startGame();
-            } catch(e) {
-                debug('ERROR: ' + e.message);
-            }
-        }
-
-        function startGame() {
-            debug('startGame() called, mode: ' + gameMode);
-
-            if (typeof THREE === 'undefined') {
-                debug('ERROR: Three.js not available');
+        function downloadQR() {
+            const canvas = qrContainer.querySelector('canvas');
+            if (!canvas) {
+                alert('QR Code not ready');
                 return;
             }
-
-            document.getElementById('menu').style.display = 'none';
-            document.getElementById('gameScreen').style.display = 'block';
-
-            gameActive = true;
-            score = 0;
-            hits = 0;
-            charging = false;
-            chargeLevel = 0;
-
-            document.getElementById('score').textContent = '0';
-            document.getElementById('hits').textContent = '0';
-
-            initScene();
-            animate();
-            
-            debug('Game initialized');
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL('image/png');
+            link.download = 'ar_ball_games_qr.png';
+            link.click();
         }
 
-        function initScene() {
-            debug('Initializing 3D scene...');
-
-            const gameContainer = document.getElementById('gameScreen');
-
-            // Scene
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x1e293b);
-
-            // Camera
-            const width = window.innerWidth;
-            const height = window.innerHeight;
-            camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-            camera.position.set(0, 5, 15);
-            camera.lookAt(0, 2, 0);
-
-            // Renderer
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(width, height);
-            renderer.shadowMap.enabled = true;
-            renderer.setPixelRatio(window.devicePixelRatio);
-
-            // Clear previous canvas if exists
-            const existingCanvas = gameContainer.querySelector('canvas');
-            if (existingCanvas) {
-                existingCanvas.remove();
-            }
-
-            gameContainer.appendChild(renderer.domElement);
-            debug('Renderer created: ' + width + 'x' + height);
-
-            // Lighting
-            const light = new THREE.DirectionalLight(0xffffff, 1);
-            light.position.set(10, 20, 10);
-            scene.add(light);
-            scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-
-            // Floor
-            const floorGeo = new THREE.PlaneGeometry(100, 100);
-            const floorMat = new THREE.MeshStandardMaterial({ color: 0x0f172a });
-            const floor = new THREE.Mesh(floorGeo, floorMat);
-            floor.rotation.x = -Math.PI / 2;
-            scene.add(floor);
-
-            // Grid
-            const grid = new THREE.GridHelper(100, 10, 0x06b6d4, 0x1e293b);
-            scene.add(grid);
-
-            // Ball
-            const ballGeo = new THREE.SphereGeometry(0.3, 32, 32);
-            const ballMat = new THREE.MeshStandardMaterial({ color: 0xef4444 });
-            ball = new THREE.Mesh(ballGeo, ballMat);
-            ball.position.set(-10, 2, 0);
-            ball.velocity = new THREE.Vector3(0, 0, 0);
-            scene.add(ball);
-            debug('Ball created');
-
-            if (gameMode === 'throw') {
-                // Create goal
-                const goalGeo = new THREE.BoxGeometry(3, 3, 0.5);
-                const goalMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, wireframe: true });
-                goalObject = new THREE.Mesh(goalGeo, goalMat);
-                goalObject.position.set(10, 2, 0);
-                scene.add(goalObject);
-                debug('Goal created');
-            } else if (gameMode === 'bat') {
-                // Create target
-                const targetGeo = new THREE.SphereGeometry(1, 32, 32);
-                const targetMat = new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x10b981, emissiveIntensity: 0.3 });
-                goalObject = new THREE.Mesh(targetGeo, targetMat);
-                goalObject.position.set(0, 10, 50);
-                scene.add(goalObject);
-                debug('Target created');
-            }
-
-            window.addEventListener('resize', onWindowResize);
+        function copyURLToClipboard() {
+            const text = appURL;
+            navigator.clipboard.writeText(text).then(() => {
+                const msg = document.getElementById('successMsg');
+                msg.style.display = 'block';
+                setTimeout(() => {
+                    msg.style.display = 'none';
+                }, 2000);
+            }).catch(err => {
+                console.error('Copy failed:', err);
+                alert('Copy failed. Try again.');
+            });
         }
 
-        function animate() {
-            if (!gameActive) return;
-            requestAnimationFrame(animate);
-
-            // Update charge
-            if (charging) {
-                chargeLevel = Math.min(100, chargeLevel + 2);
-                document.getElementById('powerBar').style.width = chargeLevel + '%';
-            }
-
-            // Physics
-            if (ball) {
-                ball.velocity.y -= 0.3; // Gravity
-                ball.position.add(ball.velocity);
-
-                // Floor bounce
-                if (ball.position.y < 0.3) {
-                    ball.position.y = 0.3;
-                    ball.velocity.y *= -0.6;
-                    ball.velocity.x *= 0.95;
-                    ball.velocity.z *= 0.95;
-                }
-
-                // Goal check
-                if (goalObject && ball.position.distanceTo(goalObject.position) < 2) {
-                    score += 10;
-                    hits++;
-                    document.getElementById('score').textContent = score;
-                    document.getElementById('hits').textContent = hits;
-                    debug('GOAL! Score: ' + score);
-                    resetGame();
-                }
-
-                // Reset if too far
-                if (ball.position.length() > 200) {
-                    resetGame();
-                }
-            }
-
-            renderer.render(scene, camera);
-        }
-
-        function startCharge() {
-            if (!gameActive) return;
-            charging = true;
-            chargeLevel = 0;
-            debug('Charging...');
-        }
-
-        function throwBall() {
-            if (!gameActive || !charging) return;
-            charging = false;
-
-            const power = chargeLevel / 100;
-            const strength = 25 * power;
-
-            debug('Throw! Power: ' + Math.round(chargeLevel) + '%');
-
-            if (gameMode === 'throw') {
-                ball.velocity.set(
-                    (Math.random() - 0.5) * 5,
-                    15 * power,
-                    strength
-                );
-            } else if (gameMode === 'bat') {
-                ball.velocity.set(
-                    (Math.random() - 0.5) * 10,
-                    Math.random() * 15 + 5,
-                    -strength * 1.2
-                );
-            }
-
-            document.getElementById('powerBar').style.width = '0%';
-            chargeLevel = 0;
-        }
-
-        function resetGame() {
-            if (gameMode === 'throw') {
-                ball.position.set(-10, 2, 0);
-            } else {
-                ball.position.set(0, 3, 30);
-            }
-            ball.velocity.set(0, 0, 0);
-        }
-
-        function goToMenu() {
-            debug('Returning to menu...');
-            gameActive = false;
-
-            document.getElementById('gameScreen').style.display = 'none';
-            document.getElementById('menu').style.display = 'block';
-
-            if (renderer) {
-                renderer.dispose();
-                const canvas = document.querySelector('canvas');
-                if (canvas) canvas.remove();
-                renderer = null;
-            }
-            
-            scene = null;
-            camera = null;
-        }
-
-        function onWindowResize() {
-            if (!camera || !renderer) return;
-            const width = window.innerWidth;
-            const height = window.innerHeight;
-            camera.aspect = width / height;
-            camera.updateProjectionMatrix();
-            renderer.setSize(width, height);
-        }
-
-        debug('Script loaded successfully');
+        console.log('QR Code Generator Loaded');
+        console.log('App URL:', appURL);
     </script>
 </body>
 </html>
