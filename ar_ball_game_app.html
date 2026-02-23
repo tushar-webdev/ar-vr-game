@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>AR Ball Games</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        :root {
+            --primary: #0f172a;
+            --secondary: #1e293b;
+            --accent: #06b6d4;
+            --accent-bright: #0ff;
+            --success: #10b981;
+            --danger: #ef4444;
+            --text: #f1f5f9;
+            --text-muted: #cbd5e1;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background: var(--primary);
+            color: var(--text);
+            font-family: 'Courier Prime', monospace;
+            overflow: hidden;
+        }
+
+        /* Menu Screen */
+        #menuScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--primary) 0%, #0a0e27 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            gap: 30px;
+            padding: 20px;
+        }
+
+        .menu-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            text-align: center;
+            background: linear-gradient(135deg, var(--accent), var(--accent-bright));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 2px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.02); }
+        }
+
+        .menu-subtitle {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+
+        .game-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            max-width: 320px;
+        }
+
+        .game-btn {
+            padding: 20px;
+            font-size: 1.2rem;
+            border: 2px solid var(--accent);
+            background: transparent;
+            color: var(--accent);
+            cursor: pointer;
+            border-radius: 8px;
+            font-family: 'Courier Prime', monospace;
+            font-weight: bold;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .game-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: var(--accent);
+            transition: left 0.3s ease;
+            z-index: -1;
+        }
+
+        .game-btn:active {
+            color: var(--primary);
+        }
+
+        .game-btn:active::before {
+            left: 0;
+        }
+
+        .game-btn:active {
+            transform: scale(0.95);
+        }
+
+        .permission-notice {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-align: center;
+            margin-top: 20px;
+            line-height: 1.5;
+        }
+
+        /* Game Screen */
+        #gameScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            z-index: 50;
+        }
+
+        #videoStream {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        #arContainer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .game-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .game-header {
+            background: rgba(15, 23, 42, 0.8);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .game-title {
+            color: var(--accent);
+            font-size: 1.1rem;
+        }
+
+        .game-stats {
+            display: flex;
+            gap: 20px;
+            color: var(--success);
+        }
+
+        .game-stat {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .game-footer {
+            background: rgba(15, 23, 42, 0.8);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .motion-indicator {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.9rem;
+            color: var(--accent);
+        }
+
+        .motion-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: motionPulse 0.5s ease-in-out infinite;
+        }
+
+        @keyframes motionPulse {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        .throw-info {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            letter-spacing: 0.5px;
+        }
+
+        .throw-button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, var(--danger), #dc2626);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            letter-spacing: 1px;
+            pointer-events: auto;
+            transition: all 0.2s;
+            font-family: 'Courier Prime', monospace;
+        }
+
+        .throw-button:active {
+            transform: scale(0.98);
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.8);
+        }
+
+        .power-meter {
+            width: 100%;
+            height: 8px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid var(--accent);
+        }
+
+        .power-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success), var(--accent), var(--danger));
+            width: 0%;
+            transition: width 0.05s;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
+        }
+
+        .control-btn {
+            flex: 1;
+            padding: 10px;
+            background: rgba(6, 182, 212, 0.2);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            border-radius: 4px;
+            font-family: 'Courier Prime', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.85rem;
+        }
+
+        .control-btn:active {
+            background: var(--accent);
+            color: var(--primary);
+        }
+
+        .motion-guide {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--accent);
+            font-size: 1.1rem;
+            pointer-events: none;
+            z-index: 20;
+            opacity: 0.8;
+        }
+
+        .aim-crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            border: 2px solid var(--accent);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 15;
+            box-shadow: 0 0 20px var(--accent);
+            opacity: 0.7;
+        }
+
+        .aim-crosshair::before,
+        .aim-crosshair::after {
+            content: '';
+            position: absolute;
+            background: var(--accent);
+        }
+
+        .aim-crosshair::before {
+            width: 100%;
+            height: 2px;
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+        }
+
+        .aim-crosshair::after {
+            width: 2px;
+            height: 100%;
+            left: 50%;
+            top: 0;
+            transform: translateX(-50%);
+        }
+
+        .permission-request {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--primary);
+            border: 2px solid var(--danger);
+            border-radius: 8px;
+            padding: 30px;
+            max-width: 90%;
+            z-index: 200;
+            text-align: center;
+        }
+
+        .permission-request h2 {
+            color: var(--danger);
+            margin-bottom: 15px;
+        }
+
+        .permission-request p {
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .permission-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .permission-buttons button {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid var(--accent);
+            background: transparent;
+            color: var(--accent);
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Courier Prime', monospace;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .permission-buttons button:active {
+            background: var(--accent);
+            color: var(--primary);
+        }
+
+        .debug-info {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #0f0;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-family: monospace;
+            max-width: 200px;
+            z-index: 300;
+        }
+
+        @media (max-width: 600px) {
+            .menu-title {
+                font-size: 1.8rem;
+            }
+
+            .game-header {
+                padding: 10px 15px;
+            }
+
+            .game-stats {
+                gap: 10px;
+            }
+
+            .game-title {
+                font-size: 1rem;
+            }
+
+            .throw-button {
+                padding: 12px;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Menu Screen -->
+    <div id="menuScreen">
+        <div class="menu-title">◆ AR BALL GAMES ◆</div>
+        <p class="menu-subtitle">MOTION-TRACKED AR EXPERIENCE</p>
+        
+        <div class="game-buttons">
+            <button class="game-btn" onclick="selectGame('cricket')">
+                🏏 CRICKET GAME
+            </button>
+            <button class="game-btn" onclick="selectGame('basketball')">
+                🏀 BASKETBALL GAME
+            </button>
+        </div>
+
+        <div class="permission-notice">
+            ℹ️ This app requires camera and motion sensor access<br>
+            You will be asked for permission when you start a game
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="gameScreen">
+        <!-- Camera Video Stream -->
+        <video id="videoStream" playsinline></video>
+
+        <!-- AR Canvas Container -->
+        <div id="arContainer"></div>
+
+        <!-- Aiming Crosshair -->
+        <div class="aim-crosshair"></div>
+
+        <!-- Game Overlay -->
+        <div class="game-overlay">
+            <!-- Header -->
+            <div class="game-header">
+                <div class="game-title" id="gameTitle">🏏 CRICKET</div>
+                <div class="game-stats">
+                    <div class="game-stat">
+                        🎯 <span id="hitCounter">0</span>
+                    </div>
+                    <div class="game-stat">
+                        ⭐ <span id="scoreDisplay">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Motion Guide -->
+            <div class="motion-guide" id="motionGuide">
+                ↔️ Tilt phone to aim<br>
+                📱 Tap THROW to launch ball
+            </div>
+
+            <!-- Footer Controls -->
+            <div class="game-footer">
+                <div class="motion-indicator">
+                    <div class="motion-dot"></div>
+                    <span id="motionStatus">Motion Sensors Active</span>
+                </div>
+
+                <div class="power-meter">
+                    <div class="power-bar" id="powerBar"></div>
+                </div>
+
+                <button class="throw-button" onmousedown="startCharging()" onmouseup="throwBall()" ontouchstart="startCharging()" ontouchend="throwBall()" ontouchcancel="throwBall()">
+                    ⚡ THROW BALL
+                </button>
+
+                <div class="throw-info" id="throwInfo">
+                    Hold button to charge power →<br>
+                    Release to throw
+                </div>
+
+                <div class="control-buttons">
+                    <button class="control-btn" onclick="resetGame()">🔄 RESET</button>
+                    <button class="control-btn" onclick="backToMenu()">⬅️ MENU</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debug Info -->
+    <div class="debug-info" id="debugInfo"></div>
+
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        // ============ GAME STATE ============
+        let gameActive = false;
+        let gameMode = null; // 'cricket' or 'basketball'
+        let score = 0;
+        let hits = 0;
+        let charging = false;
+        let chargeLevel = 0;
+        let throwPower = 0;
+
+        // 3D Scene
+        let scene, camera, renderer, ball, goal;
+
+        // Motion Tracking
+        let accelerometer = { x: 0, y: 0, z: 0 };
+        let gyroscope = { x: 0, y: 0, z: 0 };
+        let motionPermissionGranted = false;
+
+        // Camera
+        let videoStream = null;
+
+        // Debug
+        let debugMessages = [];
+
+        function debug(msg) {
+            console.log(msg);
+            debugMessages.unshift(msg);
+            if (debugMessages.length > 5) debugMessages.pop();
+            document.getElementById('debugInfo').textContent = debugMessages.join('\n');
+        }
+
+        debug('App Loading...');
+
+        // ============ MOTION SENSOR SETUP ============
+        async function requestMotionPermission() {
+            if (typeof DeviceMotionEvent === 'undefined' || typeof DeviceOrientationEvent === 'undefined') {
+                debug('Motion sensors not supported');
+                return false;
+            }
+
+            // For iOS 13+
+            if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+                try {
+                    const permission = await DeviceMotionEvent.requestPermission();
+                    if (permission === 'granted') {
+                        window.addEventListener('devicemotion', handleMotion);
+                        window.addEventListener('deviceorientation', handleOrientation);
+                        motionPermissionGranted = true;
+                        debug('Motion permission granted');
+                        return true;
+                    } else {
+                        debug('Motion permission denied');
+                        return false;
+                    }
+                } catch (e) {
+                    debug('Motion permission error: ' + e.message);
+                    return false;
+                }
+            } else {
+                // Android and older iOS
+                window.addEventListener('devicemotion', handleMotion);
+                window.addEventListener('deviceorientation', handleOrientation);
+                motionPermissionGranted = true;
+                debug('Motion sensors enabled');
+                return true;
+            }
+        }
+
+        function handleMotion(event) {
+            if (event.accelerationIncludingGravity) {
+                accelerometer.x = event.accelerationIncludingGravity.x || 0;
+                accelerometer.y = event.accelerationIncludingGravity.y || 0;
+                accelerometer.z = event.accelerationIncludingGravity.z || 0;
+            }
+        }
+
+        function handleOrientation(event) {
+            gyroscope.x = event.beta || 0;  // x axis (tilt forward/backward)
+            gyroscope.y = event.gamma || 0; // y axis (tilt left/right)
+            gyroscope.z = event.alpha || 0; // z axis (rotation)
+        }
+
+        // ============ CAMERA SETUP ============
+        async function requestCameraPermission() {
+            try {
+                debug('Requesting camera...');
+                videoStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                document.getElementById('videoStream').srcObject = videoStream;
+                debug('Camera access granted');
+                return true;
+            } catch (e) {
+                debug('Camera error: ' + e.message);
+                return false;
+            }
+        }
+
+        // ============ GAME SELECTION ============
+        async function selectGame(mode) {
+            gameMode = mode;
+            document.getElementById('gameTitle').textContent = mode === 'cricket' ? '🏏 CRICKET' : '🏀 BASKETBALL';
+
+            // Request permissions
+            const cameraOk = await requestCameraPermission();
+            const motionOk = await requestMotionPermission();
+
+            if (cameraOk) {
+                startGame();
+            } else {
+                debug('Game start failed - camera required');
+                alert('Camera access is required to play');
+            }
+        }
+
+        function startGame() {
+            debug('Game starting: ' + gameMode);
+            gameActive = true;
+            score = 0;
+            hits = 0;
+            document.getElementById('scoreDisplay').textContent = '0';
+            document.getElementById('hitCounter').textContent = '0';
+
+            document.getElementById('menuScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'block';
+
+            setTimeout(() => {
+                initAR();
+                animate();
+            }, 500);
+        }
+
+        // ============ AR SCENE SETUP ============
+        function initAR() {
+            debug('Initializing AR scene...');
+
+            const container = document.getElementById('arContainer');
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000000);
+            scene.fog = new THREE.Fog(0x000000, 100, 500);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+            camera.position.set(0, 0, 5);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(width, height);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            debug('Renderer created');
+
+            // Lighting
+            const light = new THREE.DirectionalLight(0xffffff, 1);
+            light.position.set(5, 10, 5);
+            scene.add(light);
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+
+            // Ball
+            const ballGeo = new THREE.SphereGeometry(0.2, 32, 32);
+            const ballMat = new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.5 });
+            ball = new THREE.Mesh(ballGeo, ballMat);
+            ball.position.set(0, -1, 0);
+            ball.velocity = new THREE.Vector3(0, 0, 0);
+            scene.add(ball);
+
+            // Goal/Target
+            if (gameMode === 'cricket') {
+                const stumpsGeo = new THREE.BoxGeometry(0.1, 1.5, 0.1);
+                const stumptMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b });
+                goal = new THREE.Mesh(stumpsGeo, stumptMat);
+                goal.position.set(2, 0, -15);
+                scene.add(goal);
+            } else {
+                const hoopGeo = new THREE.TorusGeometry(0.5, 0.1, 16, 32);
+                const hoopMat = new THREE.MeshStandardMaterial({ color: 0xff6b35 });
+                goal = new THREE.Mesh(hoopGeo, hoopMat);
+                goal.position.set(0, 1, -15);
+                goal.rotation.x = Math.PI / 2;
+                scene.add(goal);
+            }
+
+            debug('AR scene ready');
+        }
+
+        // ============ GAME PHYSICS ============
+        function startCharging() {
+            if (!gameActive) return;
+            charging = true;
+            chargeLevel = 0;
+            debug('Charging...');
+        }
+
+        function throwBall() {
+            if (!gameActive || !charging) return;
+            charging = false;
+
+            const power = chargeLevel / 100;
+            const aimX = (gyroscope.y / 90) * 5; // Tilt left/right
+            const aimY = (-gyroscope.x / 90) * 5; // Tilt up/down
+
+            debug('Throw! Power: ' + Math.round(chargeLevel) + '% Aim: ' + aimX.toFixed(1) + ',' + aimY.toFixed(1));
+
+            ball.velocity.set(
+                aimX * power * 10,
+                aimY * power * 10 + 3,
+                -20 * power - 5
+            );
+
+            document.getElementById('powerBar').style.width = '0%';
+            chargeLevel = 0;
+        }
+
+        function resetGame() {
+            if (ball) {
+                ball.position.set(0, -1, 0);
+                ball.velocity.set(0, 0, 0);
+            }
+        }
+
+        function backToMenu() {
+            gameActive = false;
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('menuScreen').style.display = 'block';
+
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+            }
+            if (renderer) {
+                renderer.dispose();
+            }
+        }
+
+        // ============ ANIMATION LOOP ============
+        function animate() {
+            if (!gameActive) return;
+            requestAnimationFrame(animate);
+
+            // Update power meter
+            if (charging) {
+                chargeLevel = Math.min(100, chargeLevel + 2);
+                document.getElementById('powerBar').style.width = chargeLevel + '%';
+            }
+
+            // Update camera based on device orientation
+            if (camera && gyroscope) {
+                camera.rotation.order = 'YXZ';
+                camera.rotation.y = THREE.MathUtils.degToRad(-gyroscope.y);
+                camera.rotation.x = THREE.MathUtils.degToRad(-gyroscope.x);
+            }
+
+            // Physics
+            if (ball) {
+                ball.velocity.y -= 0.15; // Gravity
+                ball.position.add(ball.velocity);
+
+                // Floor bounce
+                if (ball.position.y < -1) {
+                    ball.position.y = -1;
+                    ball.velocity.y *= -0.7;
+                    ball.velocity.x *= 0.9;
+                    ball.velocity.z *= 0.9;
+                }
+
+                // Goal collision
+                if (goal && ball.position.distanceTo(goal.position) < 1) {
+                    score += 10;
+                    hits++;
+                    document.getElementById('scoreDisplay').textContent = score;
+                    document.getElementById('hitCounter').textContent = hits;
+                    debug('GOAL! Score: ' + score);
+                    resetGame();
+                }
+
+                // Reset if too far
+                if (ball.position.length() > 100) {
+                    resetGame();
+                }
+            }
+
+            if (renderer && scene && camera) {
+                renderer.render(scene, camera);
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            if (!camera || !renderer) return;
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        });
+
+        debug('App ready - select a game');
+    </script>
+</body>
+</html>
